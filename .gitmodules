@@ -1,0 +1,3 @@
+[submodule "deps/rust-verkle"]
+	path = deps/rust-verkle
+	url = https://github.com/supragya/rust-verkle.git
