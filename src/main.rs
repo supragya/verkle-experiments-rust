@@ -36,14 +36,14 @@ fn shutdown() {
 
 fn new_block_kvs() -> (Vec<[u8; 32]>, Vec<[u8; 32]>) {
     (
-        vec![makeu8_32!("02"), makeu8_32!("0201"), makeu8_32!("03")],
+        vec![makeu8_32!("02"), makeu8_32!("0200f1"), makeu8_32!("03")],
         vec![makeu8_32!("77"), makeu8_32!("89"), makeu8_32!("1010f")],
     )
 }
 
 fn new_block_proofkvs() -> (Vec<[u8; 32]>, Vec<[u8; 32]>) {
     (
-        vec![makeu8_32!("02"), makeu8_32!("0201")],
+        vec![makeu8_32!("02"), makeu8_32!("0200f1")],
         vec![makeu8_32!("77"), makeu8_32!("89")],
     )
 }
