@@ -1,8 +1,11 @@
 extern crate flame;
+extern crate glob;
+use glob::glob;
 #[macro_use]
 extern crate flamer;
 use std::collections::HashMap;
 use std::fs::File;
+use std::process::Command;
 use std::vec;
 mod macros;
 
@@ -31,20 +34,43 @@ fn inmem_trie_new() -> Trie<MemoryDb, PrecomputeLagrange> {
 }
 
 fn shutdown() {
-    flame::dump_html(&mut File::create("flamegraph.html").unwrap()).unwrap()
+    flame::dump_html(&mut File::create("flamegraph.html").unwrap()).unwrap();
+    // Compile steplogs to png
+    for e in glob("./*.dot").expect("Failed to read glob pattern") {
+        Command::new("dot")
+            .arg("-Tpng")
+            .arg(e.unwrap().as_os_str())
+            .arg("-O")
+            .spawn()
+            .expect("");
+    }
 }
 
 fn new_block_kvs() -> (Vec<[u8; 32]>, Vec<[u8; 32]>) {
     (
-        vec![makeu8_32!("02"), makeu8_32!("0200f1"), makeu8_32!("03")],
-        vec![makeu8_32!("77"), makeu8_32!("89"), makeu8_32!("1010f")],
+        vec![
+            makeu8_32!("02"),
+            makeu8_32!("02002dc7f11494ffb7e3a672badcdad1bb77f23f3a066b2c95942a23b2c9130b"),
+            makeu8_32!("02002dc7f11494ffb7e3a672badcdad1bb77f23f3a066b2c95942a23b2c913ae"),
+            makeu8_32!("03"),
+        ],
+        vec![
+            makeu8_32!("77"),
+            makeu8_32!("a04"),
+            makeu8_32!("89"),
+            makeu8_32!("1010f"),
+        ],
     )
 }
 
-fn new_block_proofkvs() -> (Vec<[u8; 32]>, Vec<[u8; 32]>) {
+fn new_block_proofkvs() -> (Vec<[u8; 32]>, Vec<Option<[u8; 32]>>) {
     (
-        vec![makeu8_32!("02"), makeu8_32!("0200f1")],
-        vec![makeu8_32!("77"), makeu8_32!("89")],
+        vec![
+            makeu8_32!("02002dc7f11494ffb7e3a672badcdad1bb77f23f3a066b2c95942a23b2c913ae"),
+            makeu8_32!("03"),
+            makeu8_32!("04"),
+        ],
+        vec![Some(makeu8_32!("89")), Some(makeu8_32!("1010f")), None],
     )
 }
 
@@ -132,9 +158,9 @@ impl Verifier {
         root: GroupProjective<BandersnatchParameters>,
         verkle_proof: VerkleProof,
         proof_keys: Vec<[u8; 32]>,
-        proof_vals: Vec<[u8; 32]>,
+        proof_vals: Vec<Option<[u8; 32]>>,
     ) -> bool {
-        let proof_vals = proof_vals.into_iter().map(|x| Some(x)).collect();
+        // let proof_vals = proof_vals.into_iter().map(|x| Some(x)).collect();
         let (proof_result, _) = track!(
             "verifier: proof verification",
             verkle_proof.check(proof_keys, proof_vals, root)
@@ -170,7 +196,18 @@ fn run_simulation_with_images() {
     let verkle_proof = prover.generate_proof(proof_keys.clone());
 
     // Verifier
-    assert!(Verifier::prove(bc_root_comm, verkle_proof.clone(), proof_keys, proof_values) == true);
+    println!("Verkle Proof:\n{}", verkle_proof);
+    // Multiproof
+    assert!(
+        Verifier::prove(
+            bc_root_comm,
+            verkle_proof.clone(),
+            proof_keys.clone(),
+            proof_values
+        ) == true
+    );
+
+    shutdown();
 }
 
 #[flame("main")]
